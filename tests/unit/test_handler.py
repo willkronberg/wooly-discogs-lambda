@@ -1,6 +1,8 @@
 import json
 
 import pytest
+from unittest.mock import Mock, patch
+
 from tests.fixtures.lambda_context import lambda_context
 
 from hello_world import app
@@ -63,7 +65,22 @@ def apigw_event():
     }
 
 
-def test_lambda_handler(apigw_event, lambda_context):
+class Response:
+    def __init__(self):
+        self.text = "test.ip.address"
+
+
+@pytest.fixture
+def response():
+    return Response()
+
+
+requests_mock = Mock()
+
+
+@patch("hello_world.app.requests", requests_mock)
+def test_lambda_handler(apigw_event, lambda_context, response):
+    requests_mock.get.return_value = response
 
     ret = app.lambda_handler(apigw_event, lambda_context)
     data = json.loads(ret["body"])
@@ -71,3 +88,4 @@ def test_lambda_handler(apigw_event, lambda_context):
     assert ret["statusCode"] == 200
     assert "message" in ret["body"]
     assert data["message"] == "hello world"
+    assert data["location"] == "test.ip.address"
